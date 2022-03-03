@@ -9,17 +9,27 @@ class PukiBot:
 		this.setUrl(url)
 		this.setUserAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0")
 	
+	# ユーザーエージェントを設定
 	def setUserAgent(this, agent):
 		this.userAgent = agent
 	
+	# ユーザーエージェントを取得
 	def getUserAgent(this):
 		return this.userAgent
 	
+	# URLを設定
 	def setUrl(this, url):
 		this.url = url
 	
+	# URLを取得
 	def getUrl(this):
 		return this.url
+	
+	# ページのインスタンスを作成し、ソースのレスポンスをsource変数へ保存し、インスタンスを返す
+	def createPageInstance(this, pagename):
+		page = Page(this, pagename)
+		page.receiveSource()
+		return page
 	
 	# ページソースを取得
 	def getPage(this, pagename):
@@ -40,11 +50,17 @@ class PukiBot:
 	def deletePage(this, pagename):
 		return this.savePage(pagename, "")
 	
-	# 最終更新日時を取得 (形式: xxxx-xx-xxTxx:xx:xx+xx:xx)
+	# 最終更新日時を取得 (形式: xxxx-xx-xxTxx:xx:xx+xx:xx) [1.5.1～]
 	def getLastModifiedTime(this, pagename):
 		return getLastModifiedTime(this.getPage(pagename))
-#class PukiWiki:
-
+	
+	# 編集者名を取得 [1.5.1～]
+	def getAuthorName(this, pagename):
+		return getAuthorName(this.getPage(pagename))
+	
+	# 編集者のフルネームを取得 [1.5.1～]
+	def getAuthorFullName(this, pagename):
+		return getAuthorFullName(this.getPage(pagename))
 
 class Page:
 	
@@ -81,6 +97,7 @@ class Page:
 				"page": this.name,
 				"write": "ページの更新",
 				"msg": source,
+				"client": "bot",
 				"notimestamp": notimestamp
 			})
 			req = urllib.request.Request(url, data=data.encode(), headers=header, method='POST')
@@ -95,7 +112,7 @@ class Page:
 	# ソースをページから取得してsource変数に保存 (返り値: boolean)
 	def receiveSource(this):
 		try:
-			url = this.bot.getUrl() + "?cmd=source&page=" + urllib.parse.quote(this.name)
+			url = this.bot.getUrl() + "?cmd=source&page=" + urllib.parse.quote(this.name) + "&client=bot"
 			header = {
 				"User-Agent": this.bot.getUserAgent()
 			}
@@ -162,6 +179,15 @@ def convertSourceFromPreSource(str):
 
 # ソースコードの#author(...)から最終更新日時を取り出します (形式: xxxx-xx-xxTxx:xx:xx+xx:xx)
 def getLastModifiedTime(source):
-	m = re.search(r"^#author\((.*?)(?:;.*?)?,", source)
+	m = re.search(r"^#author\(\"(.*?)(?:;.*?)?\",", source)
 	return m.group(1)
 
+# ソースコードの#author(...)からユーザーネームを取り出します
+def getAuthorName(source):
+	m = re.search(r"^#author\(\".*?\",\"(.*?)\"", source)
+	return m.group(1)
+
+# ソースコードの#author(...)からフルネームを取り出します
+def getAuthorFullName(source):
+	m = re.search(r"^#author\(\".*?\",\".*?\",\"(.*?)\"", source)
+	return m.group(1)
