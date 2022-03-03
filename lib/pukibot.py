@@ -109,6 +109,32 @@ class Page:
 		except:
 			return False
 	
+	# sourceプラグインが存在しない場合の手段
+	def receiveSourceFromDiff(this):
+		try:
+			url = this.bot.getUrl() + "?cmd=diff&page=" + urllib.parse.quote(this.name) + "&client=bot"
+			header = {
+				"User-Agent": this.bot.getUserAgent()
+			}
+			req = urllib.request.Request(url, headers=header)
+			res = request.urlopen(req)
+			content = res.read()
+			res.close()
+			html = content.decode()
+			this.html = html
+			try:
+				split = re.split('<pre.*?>', html)
+				this.source = re.split('</pre>', split[1])[0]
+				this.source = re.sub(r'<span .*?class="diff_removed".*?>.*?</span>\n?', "", this.source)
+				this.source = re.sub(r'<[^>]*?>', "", this.source)
+				this.source = convertSourceFromPreSource(this.source)
+				return True
+			except:
+				this.source = ""
+				return False
+		except:
+			return False
+	
 	# ソースをページから取得してsource変数に保存 (返り値: boolean)
 	def receiveSource(this):
 		try:
@@ -129,10 +155,16 @@ class Page:
 				this.source = convertSourceFromPreSource(this.source)
 				return True
 			except:
+				# 差分から取り出す
+				if (this.receiveSourceFromDiff()):
+					return True
 				print("ソースが見つかりませんでした")
 				this.source = ""
 				return False
 		except:
+			# 差分から取り出す
+			if (this.receiveSourceFromDiff()):
+				return True
 			print("ページが見つかりませんでした")
 			return False
 	
@@ -143,7 +175,7 @@ class Page:
 	# ページの存在確認 (boolean)
 	def isExist(this):
 		try:
-			url = this.bot.getUrl() + "?" + urllib.parse.quote(this.name)
+			url = this.bot.getUrl() + "?" + urllib.parse.quote(this.name) + "&client=bot"
 			header = {
 				"User-Agent": this.bot.getUserAgent()
 			}
